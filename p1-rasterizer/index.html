@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+  img {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	width: 75%;
+  }
+  table {
+	border: 1px solid;
+  }
+  th {
+	border: 1px solid;
+  }
+  td {
+	border: 1px solid;
+  }
+</style>
+<title>CS 184 Project 1: Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous"> -->
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2023</h1>
+<h1 align="middle">Project 1: Rasterizer</h1>
+<h2 align="middle">Rahul Shah and Jeffrey Tan, CS184-pandasterizer</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the project.</p>
+
+<h2 align="middle">Section I: Rasterization</h2>
+
+<h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
+
+<ul>
+	<li>
+		The way we rasterized our triangles was by first determining the smallest xy-axis aligned rectangular bounding box around the triangle.
+		We then iterated over each pixel in that bounding box and found the coordinate of the pixel's center (P).
+		Then, we iterated over pairs of vertices in counter-clockwise order (ex: A->B), and extended a vector from each anchor vertex (A) to the point (A->P) as well.
+		This way, by taking the dot product between vector A->P and Norm(A->B), we can determine which side of the triangle's edge P is on based on the sign of the dot product.
+		Because we process pairs of vertices in a circular order, if the signs of all the dot products are the same (or 0), then we know for sure that P is inside the triangle
+	</li>
+	<li>
+		Our algorithm is no worse than one that checks each sample within the bounding box of the triangle as ours is linear w.r.t. the size of the box that bounds the triangle.
+		We start out by finding the min and max <code>x</code> and <code>y</code> coordinates of the triangle, and then iterate over each pixel in the bounding box using 2 nested for loops to retrieve the pixel locations.
+	</li>
+	<img src="img/basic-test4.png" alt="basic/test4.png">
+	<li>
+		Above, we can see the right-most vertex of the triangle in red, which is interesting as it has a lot of jaggies due to aliasing.
+	</li>
+	<li>
+		<i>Extra credit: </i>
+		We implemented a few optimizations to our rasterization algorithm to speed up the rendering process. We measured this with C++'s <code>std::clock()</code> function, which returns the number of clock ticks that have elapsed since the program started.
+		<table>
+			<tr>
+				<th>Optimization</th>
+				<th>Speedup</th>
+			</tr>
+			<tr>
+				<td>No optimizations</td>
+				<td>Approximately 9.9e-4ms to run on default settings</td>
+			</tr>
+			<tr>
+				<td>First we made sure to move calculations that were the same each iteration (such as the 6 perpendicular vector components from the 3 vectors) outside of the <code>for</code> loop</td>
+				<td>2% speedup</td>
+			</tr>
+			<tr>
+				<td>We first use <code>#pragma omp parallel for</code> to parallelize the 2 outer for loops which iterate over each pixel in the bounding box</td>
+				<td>14% speedup</td>
+			</tr>
+			<tr>
+				<td>We then use the <code>#pragma omp parallel for collapse(4)</code> clause to parallelize the inner for loops as well</td>
+				<td>22% speedup</td>
+			</tr>
+		</table>
+	</li>
+</ul>
+
+<br />
+<hr />
+<br />
+<br />
+
+<h3 align="middle">Part 2: Antialiasing triangles</h3>
+<ul>
+	<li> 
+		Our supersampling algorithm is essentially the same as rasterization, except we increase the granularity by splitting up each pixel in the image into 
+		<code>sample_rate</code> number of subpixels. We iterate through the super-sample pixels the same way, and perform the same checks on them to determine whether they lie inside the triangles.
+		If they do, then we set their <code>sample_buffer</code> entry equal to the color. Then, in <code>resolve_to_framebuffer</code>, we group the supersampled pixels into groups (squares) of <code>sample_rate</code> mini-pixels and average the color values of the pixels
+		to get the overall color of the normal pixel. Supersampling is useful because it helps anti-alias pictures and smooth out jaggies. Because of the averaging, a pixel is no longer binary, and can now be "partly inside" a triangle and take on a less saturated color value.
+		This not only helps smooth out jaggies due to the slight blurring, but it also helps connect thin/sharp parts of shapes that would otherwise be fragmented.
+	</li>
+	<div align="middle">
+		<table style="width=100%">
+		  <tr>
+			<td>
+			  <img src="img/basic-test4.png" align="middle"/>
+			  <figcaption align="middle">Supersampled at rate 1.</figcaption>
+			</td>
+			<td>
+			  <img src="img/basic-test4-4.png" align="middle"/>
+			  <figcaption align="middle">Supersampled at rate 9.</figcaption>
+			</td>
+			<td>
+			  <img src="img/basic-test4-16.png" align="middle"/>
+			  <figcaption align="middle">Supersampled at rate 16.</figcaption>
+			</td>
+		  </tr>
+		</table>
+	</div>
+	<li>
+		Above we see png screenshots of <code>basic/test4.svg</code> with the default viewing parameters and sample rates <code>1</code>, <code>4</code>, and <code>16</code> compared side-by-side, with the pixel inspector positioned over an area that showcases the effect dramatically: we see less gaps between pixels as we increase the supersample rate.
+	</li>
+	<li>
+		There are clear artifact when rate is 1, as the corner of the triangle looks fragmented. This is due to the triangle being so thin that it is able to pass around the centers of pixels such that a supersampling rate of 1
+		would mistakenly think some of the pixels do not lie within the triangle at all. In reality, although the centers of these pixels do not lie within the triangle, the triangle still intersects the pixel and the pixel should still display a color (although one that is less saturated).
+		Higher supersampling rates fix this issue because it queries at a finer granularity and checks a ton of subpixels within each pixel, and the centers of some of those subpixels do end up being inside the triangle, leading to its "parent pixel" showing a faded color. 
+		This in turn smooths out the jaggies and the fragmentations.
+	</li>
+</ul>
+
+<i>Extra Credit:</i>
+We tried doing supersampling with a different method, which is to simply take the average of the colors of the pixels that lie within the triangle. This is a much simpler method, but it does not work as well as supersampling with a higher granularity. Other approached we did ended up giving the same result such as using a different interpolation method (specifically we tried the low discrepancy method of using a Halton sequence to generate the sample points within the pixel instead of a uniform grid of points within the pixel as we did in our supersampling algorithm), so we decided to stick with supersampling in our final submission since the images are the exact same.
+<div align="middle">
+	<table style="width=100%">
+	  <tr>
+		<td>
+		  <img src="img/basic-test4.png" align="middle"/>
+		  <figcaption align="middle">Rate 1</figcaption>
+		</td>
+		<td>
+		  <img src="img/basic-test4-4.png" align="middle"/>
+		  <figcaption align="middle">Rate 9</figcaption>
+		</td>
+		<td>
+		  <img src="img/basic-test4-16.png" align="middle"/>
+		  <figcaption align="middle">Rate 16</figcaption>
+		</td>
+	  </tr>
+	</table>
+</div>
+
+<br />
+<hr />
+<br />
+<br />
+
+<h3 align="middle">Part 3: Transforms</h3>
+<ul>
+	<img src="img/my-robot.png" alt="transforms/my-robot.png">
+	<li>
+		Above we see an updated version of <code>svg/transforms/robot.svg</code> with cubeman doing something more interesting: they are waving goodbye to their old self.
+	</li>
+</ul>
+
+<br />
+<hr />
+<br />
+<br />
+
+<h2 align="middle">Section II: Sampling</h2>
+
+<h3 align="middle">Part 4: Barycentric coordinates</h3>
+<ul>
+	<li>
+		<img src="img/nabla.png" alt="triangle">
+
+		Barycentric coordinates are exactly the concept of linear combinations in linear algebra. 
+		We're essentially taking parts of some set of coordinates and mixing them together like paint to form a new coordinate.
+		However, in order to make sure the barycentric coordinate stays "inside" the original ones, we need to make sure the coefficients of this linear combination sum to equal 1.
+		Intuitively, we need this because we shouldn't be introducing more "paint volume" than we started with.
+		More formally, considering the edge case where the barycentric coordinate is exactly at one of the vertices and all the coefficients are 0 except for one. If that coefficient was not equal to 1, then the point would lie outside the shape.
+		<br>
+		As seen in the picture above, the color represents the barycentric coordinate (the mix of paint) inside the triangle. The gradient between each vertex appears to change linearly, which is because barycentric coordinates are linear combinations.
+		As the coordinate gets closer to one of the vertices, the color of that vertex shows much more strongly, which hints that the coefficient associated with that vertex is a much larger proportion of the total (1).
+	</li>
+
+	<img src="img/basic-test7.png" alt="basic/test7.png">
+</ul>
+
+<br />
+<hr />
+<br />
+<br />
+
+<h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+Pixel sampling is the process of determining which pixel in the texture image to sample from based on the barycentric coordinates of the current pixel in the image. 
+This is done by multiplying the barycentric coordinates by the width and height of the texture image, and then rounding the result to the nearest integer if using nearest sampling, or using bilinear sampling if using bilinear sampling.
+Specifically, to use bilinear sampling, we lerp thrice in the u, v dirs between texture values at a unit square containing the pixel.
+
+Use the pixel inspector to find a good example of where bilinear sampling clearly defeats nearest sampling. Show and compare four png screenshots using nearest sampling at 1 sample per pixel, nearest sampling at 16 samples per pixel, bilinear sampling at 1 sample per pixel, and bilinear sampling at 16 samples per pixel.
+Comment on the relative differences. Discuss when there will be a large difference between the two methods and why.
+
+<div align="middle">
+	<table style="width=100%">
+	  <tr>
+		<td>
+		  <img src="img/t5-n1.png" align="middle"/>
+		  <figcaption align="middle">Nearest at rate 1.</figcaption>
+		</td>
+		<td>
+		  <img src="img/t5-b1.png" align="middle"/>
+		  <figcaption align="middle">Bilinear at rate 1.</figcaption>
+		</td>
+		<td>
+		  <img src="img/t5-n16.png" align="middle"/>
+		  <figcaption align="middle">Nearest at rate 16.</figcaption>
+		</td>
+		<td>
+			<img src="img/t5-b16.png" align="middle"/>
+			<figcaption align="middle">Bilinear at rate 16.</figcaption>
+		</td>
+	  </tr>
+	</table>
+</div>
+
+<br />
+<hr />
+<br />
+<br />
+
+<h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+
+Level sampling uses mip maps of varying "levels" or resolutions. Each additional level sub-samples the original image by a factor of 4 (2 per dimension). 
+Mipmapping essentially acts like a pre-processed look-up table to quickly apply texture maps of varying resolutions.
+Thus, level sampling is faster than per-pixel sampling due to its preprocessed nature, but sacrifices memory/storage space (33% more for RGB images) in order to store the mipmaps for quick access.
+
+Our implementation of level sampling first determines what level of the mipmap we should use using the given values (u, v) that tell us where each vertex of the triangle lies on the mipmap. 
+By calculating the longest norm of the two uv vectors (formed from the three points), we found L and took the <code>log_2</code> of that to get the level of the mipmap as a float.
+For <code>L_ZERO</code>, the level was hardcoded to be 0. For <code>L_NEAREST</code>, we rounded the float level to the nearest integer value. For <code>L_LINEAR</code>, we sampled from both the floor and ceiling of the level
+and linearly interpolated the resulting colors based off of the float level.
+
+<p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="img/l0np.png" align="middle" width="400px"/>
+        <figcaption align="middle">Level 0, Nearest Pixel</figcaption>
+      </td>
+      <td>
+        <img src="img/l0bp.png" align="middle" width="400px"/>
+        <figcaption align="middle">Level 0, Bilinear Pixel</figcaption>
+      </td>
+    </tr>
+    <br>
+		<tr>
+      <td>
+        <img src="img/llnp.png" align="middle" width="400px"/>
+        <figcaption align="middle">Nearest Level, Nearest Pixel</figcaption>
+      </td>
+      <td>
+        <img src="img/llbp.png" align="middle" width="400px"/>
+        <figcaption align="middle">Nearest Level, Bilinear Pixel</figcaption>
+      </td>
+    </tr>
+		<br>
+    <tr>
+      <td>
+        <img src="img/blnp.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bilinear Level, Nearest Pixel</figcaption>
+      </td>
+      <td>
+        <img src="img/blbp.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bilinear Level, Bilinear Pixel</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<i>Extra Credit:</i> 
+See images above!
+
+<br />
+<hr />
+<br />
+<br />
+
+<h2 align="middle">Section III: Art Competition</h2>
+<p>We are participating in the optional art competition, with the following image!</p>
+
+
+<h3 align="middle">Part 7: Draw something interesting!</h3>
+<img src="img/competition.png" alt="EC">
+<i>Extra Credit:</i> 
+We made this by supersampling in an incorrect way: we counted the proportion of the pixel that was covered by the triangle, and then multiplied the color of the pixel by that proportion.
+We did this in the rasterize function, without barycentric coordinates. We then swapped the way we paired alpha, beta, and gamma for a cool effect.
+
+<br />
+<br />
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script> -->
+
+<center>
+	<a href="https://rsha256.github.io/p1-rasterizer-sp23-pandasterizer-website/proj1/index.html">Link to this website!</a>
+</center>
+</body>
+</html>
