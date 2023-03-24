@@ -1,0 +1,203 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }
+  </style> 
+<title>Andy Huang & Jeffrey Tan  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: Additional Features to PathTracer</h1>
+    <h2 align="middle">Andy Huang & Jeffrey Tan</h2>
+    <h2 align="middle">
+        <a href="https://tanjeffreyz.github.io/cs184-portfolio/p3-2-pathtracer/">Webpage URL</a>
+    </h2>
+
+    <div class="padded">
+
+        <h3 align="middle">Part 1. Mirror and Glass Materials</h3>
+
+        <p><b>
+            Show a sequence of six images of scene `CBspheres.dae` rendered with `max_ray_depth` set to 0, 1, 2, 3, 4, 5, and 100. The other settings should be at least 64 samples per pixel and 4 samples per light. Make sure to include all screenshots.
+        </b></p>
+        <div align="center">
+            <table style="width:100%">
+                <tr align="center">
+                    <td>
+                        <img src="part1/CBspheres_m0.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 0 bounce</figcaption>
+                    </td>
+                    <br>
+                    <td>
+                        <img src="part1/CBspheres_m1.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 1 bounce</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="part1/CBspheres_m2.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 2 bounce</figcaption>
+                    </td>
+                    <br>
+                    <td>
+                        <img src="part1/CBspheres_m3.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 3 bounce</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="part1/CBspheres_m4.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 4 bounce</figcaption>
+                    </td>
+                    <br>
+                    <td>
+                        <img src="part1/CBspheres_m5.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 5 bounce</figcaption>
+                    </td>
+                </tr>
+                <tr align="center">
+                    <td>
+                        <img src="part1/CBspheres_m100.png" align="middle" width="300px"/>
+                        <figcaption>CBpheres 100 bounce</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <br>
+        <p><b>
+            Point out the new multibounce effects that appear in each image. 
+        </b></p>
+        <p>
+            <b>0 bounce:</b>
+            <br>
+            Nothing in the scene is lit up aside from the light sources.
+            <br>
+            <b>1 bounce:</b>
+            <br>
+            Walls and floors are lit up through direct lighting. The two spheres are pitch black aside from the reflection of the direct light source on them.
+            <br>
+            <b>2 bounce:</b>
+            <br>
+            The ceiling is lit up by indirect lighting from the scene. The mirror sphere reflects both the direct and indirect light from scenes in the room. Glass sphere reflects the indirect lighting from wall behind the camera. The shadows under the spheres are brighter.
+            <br>
+            <b>3 bounce:</b>
+            <br>
+            The glass sphere is transparent now. The reflection of the glass sphere on the mirror sphere is of a black sphere. Part of the shadow under the glass sphere is completely white now due to the light from the direct light passing through the glass ball. 
+            <br>
+            <b>4 bounce:</b>
+            <br>
+            The edges of the glass sphere are more transparent and the reflection of the glass ball on the mirror ball is now an accurate reflection of a glass ball. There is also a white spec on the wall from the mirror ball reflecting light through the glass ball.
+            <br>
+            <b>5 bounce:</b>
+            <br>
+            Inside of glass sphere is brighter.
+            <br>
+            <b>100 bounce:</b>
+            <br>
+            The entire scene is significantly brighter.
+        </p>
+        <br>
+        <p><b>
+            Explain how these bounce numbers relate to the particular effects that appear. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            With 0 bounce, the entire room is dark aside the light sources due to the absence of light rays in the scene.
+            <br>
+            With 1 bounce, the walls and floors are lit up. Both spheres are pitch black aside from the reflection of the light source on their surfaces due to the absence of indirect lighting from the room (there is nothing to reflect aside from the direct light source).
+            <br>
+            With 2 bounces, the shadows under the spheres are brighter due to the indirect lighting from the walls. Furthermore, the ceiling is also lit up from indirect lighting. The mirror sphere reflects the walls, floors, light source and glass sphere but not the ceiling. This is due to the indirect lighting or direct lighting coming off of these sources. Note that there is no indirect light emitted from the ceiling because it takes 2 bounces for ceiling to get lit up. Finally, the glass sphere has a mild reflection of the wall behind the camera and floor due to indirect lighting.
+            <br>
+            With 3 bounces, the glass sphere now shows the wall and floors because indirect light from the walls and floors are able to intersect one side of the sphere, go through it, and intersect with the other side of the sphere. Additionally, there is a white spot under the glass sphere. This is because the 3 bounces allow direct lighting to intersect the glass sphere's surface, travel through the sphere and intersect with the other side of the sphere, and finally exit the sphere and intersect the floor. Finally, the mirror sphere reflects the ceiling due to the ceiling emitting indirect lighting.
+            <br>
+            With 4 bounces, the mirror sphere reflects the transparent glass sphere because rays from indirect lighting are now able to exit the sphere an intersect the mirror ball. To elaborate, indirect lighting from the wall intersects the sphere, travels through it and intersects with the other side of the sphere, and finally exits the sphere, intersecting the mirror sphere. Furthermore, there is a white spec on the blue wall to the left of the glass sphere due light from the mirror sphere reflecting light through the glass sphere onto the wall.
+            <br>
+            With 5 bounces, the glass sphere is slightly brighter due to light from the bright spot under the glass sphere bouncing back into the sphere and intersecting the otherside of the sphere.
+            <br>
+            With 100 bounces, the entire scene is brighter because direct and indirect lighting from all over the scene is able contribute to the brightness of any pixel on the scene via bounces. 
+        </p>
+        <br>
+
+        <h3 align="middle">Part 4. Depth of Field</h3>
+        <b>
+            For these subparts, we recommend using a microfacet BSDF scene to show off the cool out of focus effects you can get with depth of field!
+        </b>
+        <p><b>
+            In a few sentences, explain the differences between a pinhole camera model and a thin-lens camera model. 
+        </b></p>
+        <p>
+            All objects captured by a pinhole camera are in perfect focus, as rays cast through each pixel travel straight out into the scene. 
+            However, with a thin-lens camera, rays are randomly cast from the pixel onto various places on the lens, and then all converge onto the point in focus at 
+            <code>focalDistance</code>. Now, rays cast from each pixel to a certain point do not all arrive in the same direction and thus we observe a blurring effect.
+            Casted rays that intersect objects in front of the plane of focus or behind it do not hit the exact same place on the object (unlike in a pinhole camera)
+            Therefore, the pixel that the rays were casted from will display the average value over multiple locations on the object (or even over multiple objects if some of the rays miss due to divergence!)
+        </p>
+        <br>
+        <p><b>
+            Show a "focus stack" where you focus at 4 visibly different depths through a scene. Make sure to include all screenshots.
+        </b></p>
+        <div align="middle">
+            <table style="width:100%">
+              <tr align="center">
+                <td>
+                  <img src="part4/dragon_d2.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with focal distance of 2</figcaption>
+                </td>
+                <td>
+                  <img src="part4/dragon_d4.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with focal distance of 4</figcaption>
+                </td>
+              </tr>
+              <tr align="center">
+                <td>
+                  <img src="part4/dragon_d5.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with focal distance of 5</figcaption>
+                </td>
+                <td>
+                  <img src="part4/dragon_d8.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with focal distance of 8</figcaption>
+                </td>
+              </tr>
+            </table>
+        </div>
+        <br>
+        <p><b>
+            Show a sequence of 4 pictures with visibly different aperture sizes, all focused at the same point in a scene. Make sure to include all screenshots.
+        </b></p>
+        <div align="middle">
+            <table style="width:100%">
+              <tr align="center">
+                <td>
+                  <img src="part4/dragon_b0_05.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with aperture size of 0.05</figcaption>
+                </td>
+                <td>
+                  <img src="part4/dragon_b0_23.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with aperture size of 0.23</figcaption>
+                </td>
+              </tr>
+              <tr align="center">
+                <td>
+                  <img src="part4/dragon_b0_50.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with aperture size of 0.50</figcaption>
+                </td>
+                <td>
+                  <img src="part4/dragon_b0_75.png" align="middle" width="400px"/>
+                  <figcaption>CBdragon.dae with aperture size of 0.75</figcaption>
+                </td>
+              </tr>
+            </table>
+        </div>
+        <br>
+
+    </div>
+</body>
+</html>
+
