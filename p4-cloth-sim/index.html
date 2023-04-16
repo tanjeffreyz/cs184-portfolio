@@ -1,0 +1,437 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    max-width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2017</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Jeffrey Tan & Andy Huang, CS184-??</h2>
+<a href="https://tanjeffreyz.github.io/cs184-portfolio/p4-cloth-sim/">Webpage URL</a>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the project.</p>
+
+<!-------------
+|   Part 1    |
+-------------->
+<h2 align="middle">Part 1: Masses and springs</h2>
+
+<div align="center">
+  <table style="width:100%">
+      <tr align="center">
+          <td>
+              <img src="part1/no_shear.png" align="middle" width="500px"/>
+              <figcaption>Without Shearing</figcaption>
+          </td>
+          <td>
+              <img src="part1/only_shear.png" align="middle" width="500px"/>
+              <figcaption>With Only Shearing</figcaption>
+          </td>
+      </tr>
+      <tr align="center">
+          <td>
+              <img src="part1/all_constraints.png" align="middle" width="500px"/>
+              <figcaption>All Constraints</figcaption>
+          </td>
+      </tr>
+  </table>
+</div>
+
+<!-------------
+|   Part 2    |
+-------------->
+<h2 align="middle">Part 2: Simulation via numerical integration</h2>
+
+<!-- Spring constant -->
+<h3>Varying Spring Constant</h3>
+<div align="center">
+  <table style="width:100%">
+      <tr align="center">
+        <td>
+          <img src="part2/ks_200.png" align="middle" width="500px"/>
+          <figcaption><code>ks = 200</code></figcaption>
+        </td>
+        <td>
+          <img src="part2/ks_5000.png" align="middle" width="500px"/>
+          <figcaption><code>ks = 5000</code></figcaption>
+        </td>
+      </tr>
+      <tr align="center">
+        <td>
+          <img src="part2/ks_15000.png" align="middle" width="500px"/>
+          <figcaption><code>ks = 15000</code></figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+
+<p>Low ks: The cloth appears to be less stiff. When the cloth falls, it curls and folds more. </p>
+<p>High ks: The cloth appears to be stiffer. When the cloth falls, it behaves more like a rigid object. There are less creases and folds. </p>
+
+
+<!-- Density -->
+<h3>Varying Density</h3>
+<div align="center">
+  <table style="width:100%">
+      <tr align="center">
+        <td>
+          <img src="part2/density_5.png" align="middle" width="500px"/>
+          <figcaption><code>density = 5</code></figcaption>
+        </td>
+        <td>
+          <img src="part2/density_15.png" align="middle" width="500px"/>
+          <figcaption><code>density = 15</code></figcaption>
+        </td>
+      </tr>
+      <tr align="center">
+        <td>
+          <img src="part2/density_50.png" align="middle" width="500px"/>
+          <figcaption><code>density = 50</code></figcaption>
+        </td>
+        <td>
+          <img src="part2/density_10000.png" align="middle" width="500px"/>
+          <figcaption><code>density = 10000</code></figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+
+<p>Low density: The cloth appears to be lighter. When the cloth falls and is in steady state, it appears to be flatter with less creases. This is due to the springs not being stretched out as much.</p>
+<p>
+  High density: The cloth seems to carry more weight, as the middle part appears 
+  to sag much more, and the creases on the sides are more pronounced. 
+  Interestingly, at extremely high densities, the cloth becomes nearly featureless
+  and flat, which is due to the bottom of the cloth having so much mass that all the
+  springs are stretched to their maximum allowed length, leading to a flat appearance.
+</p>
+
+
+<!-- Damping -->
+<h3>Varying Damping Constant</h3>
+<div align="center">
+  <table style="width:100%">
+      <tr align="center">
+        <td>
+          <img src="part2/pinned4_default.png" align="middle" width="500px"/>
+          <figcaption>Pinned 4</figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+
+<p>Low damping: The cloth appears to be moving more freely and takes longer to reach steady state. This is due to less energy lost to the environment during the cloth's motion. At damping 0, the cloth perpetually swings due to no energy loss to the environment. </p>
+<p>High damping: The cloth seems to be moving through a very viscous fluid and falls significantly slower. </p>
+
+<!-------------
+|   Part 3    |
+-------------->
+<h2 align="middle">Part 3: Handling collisions with other objects</h2>
+
+<div align="center">
+  <table style="width:100%">
+      <tr align="center">
+        <td>
+          <img src="part3/ks_500.png" align="middle" width="500px"/>
+          <figcaption><code>ks = 500</code></figcaption>
+          <p>A low spring constant makes the cloth more flexible and bendy. As a result, it warps around the sphere and there are more folds and creases when resting atop of the sphere.</p>
+        </td>
+        <td>
+          <img src="part3/ks_5000.png" align="middle" width="500px"/>
+          <figcaption><code>ks = 5000</code></figcaption>
+          <p>
+            Increasing the spring constant a bit causes noticeably fewer creases to form in the cloth. 
+            The creases that do form are also larger/more gradual than before.
+          </p>
+        </td>
+      </tr>
+      <tr align="center">
+        <td>
+          <img src="part3/ks_50000.png" align="middle" width="500px"/>
+          <figcaption><code>ks = 50000</code></figcaption>
+          <p>
+            A high spring constant makes the cloth stiffer. As a result, it resists warping around the sphere and there are significantly less folds and creases when resting atop of the sphere.
+            The folds also seem stiffer as they are much larger than with <code>ks = 500</code>.
+          </p>
+        </td>
+      </tr>
+  </table>
+</div>
+
+<img src="part3/plane.png" align="middle" width="500px"/>
+<figcaption>A cloth experiencing the joys of life in its natural habitat</figcaption>
+
+<!-------------
+|   Part 4    |
+-------------->
+<h2 align="middle">Part 4: Handling self-collisions</h2>
+
+<h3>Default Parameters</h3>
+<div align="center">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="part4/start.png" align="middle" width="333px"/>
+        <figcaption>Start</figcaption>
+      </td>
+      <td>
+        <img src="part4/initial.png" align="middle" width="333px"/>
+        <figcaption>Initial self-collision</figcaption>
+      </td>
+      <td>
+        <img src="part4/ending.png" align="middle" width="333px"/>
+        <figcaption>Ending state</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h3>Varying Spring Constant</h3>
+<div align="center">
+  <h4>Low Spring Constant</h4>
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="part4/ks_1_start.png" align="middle" width="333px"/>
+        <figcaption>Start, ks = 1</figcaption>
+      </td>
+      <td>
+        <img src="part4/ks_1_initial.png" align="middle" width="333px"/>
+        <figcaption>Initial self-collision, ks = 1</figcaption>
+      </td>
+      <td>
+        <img src="part4/ks_1_ending.png" align="middle" width="333px"/>
+        <figcaption>Ending state, ks = 1</figcaption>
+      </td>
+    </tr>
+  </table>
+  
+  <h4>High Spring Constant</h4>
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="part4/ks_100000_start.png" align="middle" width="333px"/>
+        <figcaption>Start, ks = 100000</figcaption>
+      </td>
+      <td>
+        <img src="part4/ks_100000_initial.png" align="middle" width="333px"/>
+        <figcaption>Initial self-collision, ks = 100000</figcaption>
+      </td>
+      <td>
+        <img src="part4/ks_100000_ending.png" align="middle" width="333px"/>
+        <figcaption>Ending state, ks = 100000</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  With a low spring constant, the cloth behaves like silk and has a lot of 
+  very tiny folds upon initial self collision. The ending state of the cloth looks
+  structureless and very messy, as the springs aren't strong enough to hold the original square-like
+  appearance of the cloth. However, with a much larger spring constant, there are much larger folds
+  upon initial self collision, and as the cloth collapses, it holds its square-like appearance much better.
+  This causes it to fold rather neatly with its edges flush with each other.
+</p>
+
+<h3>Varying Density</h3>
+<div align="center">
+  <h4>Low Density</h4>
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="part4/density_1_start.png" align="middle" width="333px"/>
+        <figcaption>Start, density = 1</figcaption>
+      </td>
+      <td>
+        <img src="part4/density_1_initial.png" align="middle" width="333px"/>
+        <figcaption>Initial self-collision, density = 1</figcaption>
+      </td>
+      <td>
+        <img src="part4/density_1_ending.png" align="middle" width="333px"/>
+        <figcaption>Ending state, density = 1</figcaption>
+      </td>
+    </tr>
+  </table>
+  
+  <h4>High Density</h4>
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="part4/density_1000_start.png" align="middle" width="333px"/>
+        <figcaption>Start, density = 1000</figcaption>
+      </td>
+      <td>
+        <img src="part4/density_1000_initial.png" align="middle" width="333px"/>
+        <figcaption>Initial self-collision, density = 1000</figcaption>
+      </td>
+      <td>
+        <img src="part4/density_1000_ending.png" align="middle" width="333px"/>
+        <figcaption>Ending state, density = 1000</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  With a low density, the cloth displays similar behavior to cloth with a high spring constant. 
+  In the initial state and ending state, the cloth with a low density seems to behave like wrapping paper.
+  However in the start state, behavior of the low density cloth differs from a high spring constant cloth. 
+  The cloth with a low density folds a bit during the start as opposed to the cloth with a high spring constant which stays completely straight.
+  On the other hand, with a high density, the cloth displays very similar behavior to a cloth with a low spring constant.
+  The cloth has more mass, thus collapsing onto itself with more force which forms a clump rather folding in the ending state.
+</p>
+
+
+<!-------------
+|   Part 5    |
+-------------->
+<h2 align="middle">Part 5: Shaders</h2>
+
+<p>
+  A shader program calculates what the color at each point on the object should be.
+  The vertex shader is in charge of transforming the positions and normals of the
+  object's vertices. It passes these positions and normal vectors to the frament shader,
+  which takes in the spatial characteristics of the object's vectors and computes a single, final
+  color to display, which it writes into <code>out_color</code>.
+</p>
+
+<p>
+  The Blinn-Phong shading model essentially mixes three lighting components: ambient, diffuse, and specular.
+  Ambient lighting is a gentle, uniform lighting from the surroundings applied to the entire object, and the strength of this
+  lighting is controlled by <code>k_a</code>. The diffuse component represents the gradual shading of different parts of the object due to
+  how those surfaces are angled relative to the light (Lambert's Cosine Law). Surfaces angled away from the light source appear darker than those angled more towards the light source.
+  This lighting does not depend on viewing direction.
+  Specular lighting, on the other hand, does depend on the viewing angle. It instead uses the angle between the surface normal and the bisector of the vectors to the light and viewer.
+  It provides a sort of glare on the surface of the object.
+  This is achieved due to the exponent in the specular component of the Blinn-Phong model. Any angular deviations from <code>alpha = 0</code> cause <code>cos(alpha)</code> to drop below 1, which is further reduced
+  by the exponent. This leads to a sharp falloff in brightness from point where <code>alpha = 0</code>, causing a bright spot.
+</p>
+
+<h3>Blinn-Phong Components</h3>
+<table style="width:100%">
+  <tr align="center">
+    <td>
+      <img src="part5/phong_ambient.png" align="middle" width="500px"/>
+      <figcaption>Ambient lighting only</figcaption>
+    </td>
+    <td>
+      <img src="part5/phong_diffuse.png" align="middle" width="500px"/>
+      <figcaption>Diffuse lighting only</figcaption>
+    </td>
+  </tr>
+  <tr align="center">
+    <td>
+      <img src="part5/phong_specular.png" align="middle" width="500px"/>
+      <figcaption>Specular lighting only</figcaption>
+    </td>
+    <td>
+      <img src="part5/phong_regular.png" align="middle" width="500px"/>
+      <figcaption>All lighting</figcaption>
+    </td>
+  </tr>
+</table>
+
+
+<h3>Custom Texture</h3>
+<div align="center" style="width:100%">
+  <img src="part5/custom_texture.png" align="middle" width="750px" />
+</div>
+
+<h3>Bump vs Displacement Mapping</h3>
+<table style="width:100%">
+  <tr align="center">
+    <td>
+      <img src="part5/bump_regular.png" align="middle" width="333px"/>
+      <figcaption>Bump mapping on the cloth</figcaption>
+    </td>
+    <td>
+      <img src="part5/bump_sphere_regular.png" align="middle" width="333px"/>
+      <figcaption>Bump mapping on the sphere</figcaption>
+    </td>
+  </tr>
+  <tr align="center">
+    <td>
+      <img src="part5/displacement_regular.png" align="middle" width="333px"/>
+      <figcaption>Displacement mapping on the cloth</figcaption>
+    </td>
+    <td>
+      <img src="part5/displacement_sphere_regular.png" align="middle" width="333px"/>
+      <figcaption>Displacement mapping on the sphere</figcaption>
+    </td>
+  </tr>
+</table>
+
+The bump and displacement renders look very similar, but have subtle differences. For one, the outline of the 
+bump-mapped cloth and sphere is perfectly smooth even though the surface of the sphere and cloth look bumpy.
+On the other hand, the outline of the displacement-mapped sphere is uneven because the vertices are actually physically
+displaced from their original positions. Furthermore, a smaller detail to notice is that the displacement-mapped objects
+have visibly more speckles due to the specular component of Blinn-Phong shading.
+
+<h4>Varying Coarseness</h4>
+<table style="width:100%">
+  <tr align="center">
+    <td>
+      <img src="part5/bump_sphere_16.png" align="middle" width="333px"/>
+      <figcaption>Bump mapping on the sphere, 16x16</figcaption>
+    </td>
+    <td>
+      <img src="part5/bump_sphere_128.png" align="middle" width="333px"/>
+      <figcaption>Bump mapping on the sphere, 128x128</figcaption>
+    </td>
+  </tr>
+
+  <p>With a higher resolution (128x128), the bumps on the sphere seem to be smaller but have greater detail. Furthermore, the bump outlines are smoother.</p>
+
+  <tr align="center">
+    <td>
+      <img src="part5/displacement_sphere_16.png" align="middle" width="333px"/>
+      <figcaption>Displacement mapping on the sphere, 16x16</figcaption>
+    </td>
+    <td>
+      <img src="part5/displacement_sphere_128.png" align="middle" width="333px"/>
+      <figcaption>Displacement mapping on the sphere, 128x128</figcaption>
+    </td>
+  </tr>
+</table>
+
+<p>With a higher resolution, the sphere maintains its shape better when displaced. In the lower resolution, the spheres overall shape looks quite warped.</p>
+
+<h3>Mirror Shader</h3>
+<table style="width:100%">
+  <tr align="center">
+    <td>
+      <img src="part5/mirror_cloth.png" align="middle" width="500px"/>
+      <figcaption>Mirror shader on cloth</figcaption>
+    </td>
+    <td>
+      <img src="part5/mirror_sphere.png" align="middle" width="500px"/>
+      <figcaption>Mirror shader on sphere</figcaption>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>
